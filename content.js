@@ -124,10 +124,15 @@ document.addEventListener(
     e.preventDefault();
 
     chrome.runtime.sendMessage({ type: 'translateText', text: text }, function (resp) {
+      if (chrome.runtime.lastError) {
+        // 后台服务未响应：通常是该标签页在装扩展前就打开、脚本未注入
+        showTranslation(text, '(后台未响应：' + chrome.runtime.lastError.message + '；请刷新本页面后重试)');
+        return;
+      }
       if (resp && typeof resp.translation === 'string') {
         showTranslation(text, resp.translation);
       } else {
-        showTranslation(text, '(翻译失败)');
+        showTranslation(text, '(翻译失败：后台无返回，请刷新页面)');
       }
     });
   },

@@ -2,7 +2,7 @@
 
 // 从 storage 读取用户设置（目标语言 + 翻译引擎）
 async function getSettings() {
-  const def = { target: 'zh-CN', engine: 'google' };
+  const def = { target: 'zh-CN', engine: 'mymemory' };
   try {
     const s = await chrome.storage.sync.get(def);
     return Object.assign(def, s);
@@ -31,9 +31,14 @@ async function translateGoogle(text, target) {
   return out;
 }
 
-// 翻译引擎 2：MyMemory（免费、无需 key，有每日额度，国内一般可用）
-async function translateMyMemory(text, target) {
-  const langpair = 'en|' + target; // 自动识别源语言能力弱，默认英->目标
+// 猜源语言：含汉字 → 视为中文（译到目标语言）；否则默认英文（最常见的「外文→中文」）
+function guessSource(text) {
+  return /[　-〿㐀-鿿豈-﫿]/.test(text) ? 'zh-CN' : 'en';
+}
+
+// 翻译引擎 2：MyMemory（免费、无需 key，有每日额度，国内一般可直连）
+async function translateMyMemory(text, target, source) {
+  const langpair = source + '|' + target;
   const url =
     'https://api.mymemory.translated.net/get?q=' +
     encodeURIComponent(text) +
@@ -49,22 +54,28 @@ async function translateMyMemory(text, target) {
 }
 
 async function translate(text, settings) {
-  try {
-    if (settings.engine === 'mymemory') {
-      return await translateMyMemory(text, settings.target);
-    }
-    return await translateGoogle(text, settings.target);
-  } catch (e) {
-    // 主引擎失败，自动尝试备用引擎
+  const src = guessSource(text);
+  // 按所选引擎排定主/备顺序，依次尝试，任一成功即返回
+  const order =
+    settings.engine === 'mymemory'
+      ? [
+          () => translateMyMemory(text, settings.target, src),
+          () => translateGoogle(text, settings.target)
+        ]
+      : [
+          () => translateGoogle(text, settings.target),
+          () => translateMyMemory(text, settings.target, src)
+        ];
+
+  let lastErr;
+  for (const fn of order) {
     try {
-      if (settings.engine === 'google') {
-        return await translateMyMemory(text, settings.target);
-      }
-      return await translateGoogle(text, settings.target);
-    } catch (e2) {
-      return '(翻译失败，请检查网络或切换翻译引擎)';
+      return await fn();
+    } catch (e) {
+      lastErr = e;
     }
   }
+  return '(翻译失败：' + (lastErr ? lastErr.message : '未知错误') + '；请检查网络或刷新页面)';
 }
 
 function isRestrictedUrl(url) {

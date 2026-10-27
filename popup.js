@@ -3,7 +3,7 @@ const engineSel = document.getElementById('engine');
 const targetSel = document.getElementById('target');
 const link = document.getElementById('shortcutLink');
 
-chrome.storage.sync.get({ engine: 'google', target: 'zh-CN' }, function (s) {
+chrome.storage.sync.get({ engine: 'mymemory', target: 'zh-CN' }, function (s) {
   engineSel.value = s.engine;
   targetSel.value = s.target;
 });
