@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "划词快译",
+  "version": "1.0.0",
+  "description": "选中任意文字，按快捷键即可翻译，无需右键菜单。",
+  "permissions": [
+    "activeTab",
+    "commands",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://translate.googleapis.com/*",
+    "https://api.mymemory.translated.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "划词快译",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "translate-selection": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "翻译当前选中的文字"
+    }
+  }
+}
